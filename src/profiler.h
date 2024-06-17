@@ -30,21 +30,19 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "util/numeric.h"      // paging()
 
 class Profiler;
-// Global profiler. Its data is available for user.
+// Global profiler. User can view its data via in-game profiler menu, graph or
+// "/profiler" command.
 extern Profiler *g_profiler;
 
 /*
-	Time profiler
-
-	Collects data (time intervals and other) in two independent cycles.
+	Collects data (time intervals, counts etc.) in two independent cycles.
 
 	- Cycle for profiler graph lasts for one frame and managed in 
 	`Game::updateProfilerGraphs()`, result is displayed by `ProfilerGraph`.
 
 	- Cycle for all other data lasts for `profiler_print_interval` seconds (user
-	setting) and managed in `Game::updateProfilers()`, result is given in text
-	form by `print` function. User can view it via in-game profiler menu or
-	"/profiler" command.
+	setting) or 3 seconds and managed in `Game::updateProfilers()`, result is
+	given in text form by `print` function. 
 
 	All data is cleared at cycle end.
 */
@@ -54,7 +52,7 @@ public:
 	Profiler();
 
 	/*
-		Adds value to given profiler entry (`name`). Does not change count
+		Adds value to profiler entry with given `name`. Does not change count
 		in the entry.
 
 		As a resut, profiler will give *sum* of record values as value and "1" as avgCount.
@@ -63,17 +61,17 @@ public:
 	void add(const std::string &name, float value);
 
 	/*
-		Adds value to given profiler entry (`name`) and increases its record count
-		by 1.
+		Adds value to profiler entry with given `name` and increases its record
+		count by 1.
 	
-		As a resut, profiler will give *average* of record vaues as value and count of
-		records as avgCount.
+		As a resut, profiler will give *average* of record vaues as value and
+		count of records as avgCount.
 		(If only this method is used for given entry between profiler updates)
 	*/
 	void avg(const std::string &name, float value);
 	/*
-		Sets value to given profiler entry (`name`) if it is larger then existing one and
-		increases record coutn by 1.
+		Sets value to profiler entry with given `name` if it is larger then existing
+		one and increases record coutn by 1.
 
 		As a resut, profiler will give *max* record value as value and count of records as avgCount.
 		(If only this method is used for given entry between profiler updates)
@@ -89,15 +87,16 @@ public:
 
 	// Returns the line count
 	int print(std::ostream &o, u32 page = 1, u32 pagecount = 1);
-	// Writes values on page into `o`.
+	// Breaks `m_data` into `pagecount` pages and writes values on given `page` into `o`.
 	void getPage(GraphValues &o, u32 page, u32 pagecount);
 
-
+	// More simple version of `graphAdd` for cases when value changes once per frame.
 	void graphSet(const std::string &id, float value)
 	{
 		MutexAutoLock lock(m_mutex);
 		m_graphvalues[id] = value;
 	}
+	// Version of `Profiler::add` that works with `m_profiler` instead of `m_data`.
 	void graphAdd(const std::string &id, float value)
 	{
 		MutexAutoLock lock(m_mutex);
@@ -143,7 +142,7 @@ private:
 	// All the profiler entries, stored untill `clear()` call.
 	std::map<std::string, DataPair> m_data;
 	// Values for profiler graph collected untill next frame draw. Value history
-	// are stored in `ProfilerGraph`.
+	// is stored in `ProfilerGraph`.
 	std::map<std::string, float> m_graphvalues;
 	u64 m_start_time;
 };
