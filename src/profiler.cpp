@@ -180,3 +180,13 @@ void Profiler::getPage(GraphValues &o, u32 page, u32 pagecount)
 		o[i.first] = i.second.getValue();
 	}
 }
+
+void Profiler::graphAdd(const std::string& id, float value)
+{
+	MutexAutoLock lock(m_mutex);
+	auto it = m_graphvalues.find(id);
+	if (it == m_graphvalues.end())
+		m_graphvalues.emplace(id, value);
+	else
+		it->second += value;
+}

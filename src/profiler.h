@@ -97,15 +97,8 @@ public:
 		m_graphvalues[id] = value;
 	}
 	// Version of `Profiler::add` that works with `m_profiler` instead of `m_data`.
-	void graphAdd(const std::string &id, float value)
-	{
-		MutexAutoLock lock(m_mutex);
-		auto it = m_graphvalues.find(id);
-		if (it == m_graphvalues.end())
-			m_graphvalues.emplace(id, value);
-		else
-			it->second += value;
-	}
+	void graphAdd(const std::string& id, float value);
+
 	void graphPop(GraphValues &result)
 	{
 		MutexAutoLock lock(m_mutex);
