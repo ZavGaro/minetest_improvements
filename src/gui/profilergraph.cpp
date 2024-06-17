@@ -18,8 +18,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#include "porting.h"
 #include "profilergraph.h"
+#include "porting.h"
 #include "util/string.h"
 
 void ProfilerGraph::put(const Profiler::GraphValues &values)
@@ -94,6 +94,8 @@ void ProfilerGraph::draw(s32 x_left, s32 y_bottom, video::IVideoDriver *driver,
 				show_min = 0;
 		}
 
+		// Text drawing
+
 		const s32 texth = 15;
 		char buf[32];
 
@@ -110,13 +112,14 @@ void ProfilerGraph::draw(s32 x_left, s32 y_bottom, video::IVideoDriver *driver,
 				"%s\n\n%s",
 				formats_by_precision[floorf(show_max) == show_max],
 				formats_by_precision[floorf(show_min) == show_min]);
-
 		porting::mt_snprintf(buf, sizeof(buf),
 				format, show_max, show_min);
 		font->draw(buf,
 				core::rect<s32>(textx, y - graphh, textx2,
 					y - graphh + texth),
 				meta.color);
+
+		// Graph drawing
 
 		s32 graph1y = y;
 		s32 graph1h = graphh;
