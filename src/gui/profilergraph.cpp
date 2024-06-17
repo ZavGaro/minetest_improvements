@@ -24,38 +24,70 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 void ProfilerGraph::put(const Profiler::GraphValues &values)
 {
-	m_log.emplace_back(values);
+	for (auto& graph : m_log2) {
+		const auto iter_for_value = values.find(graph.first);
+		auto& queue = graph.second.queue;
+		if (iter_for_value == values.end()) {
+			queue.emplace_back(NAN);
+			// Remove entry if it contains only NaNs.
+			bool empty = true;
+			for (const auto value : queue) {
+				if (value != NAN) {
+					empty = false;
+					break;
+				}
+			}
+			if (empty) {
+				m_log2.erase(graph.first);
+				continue;
+			}
+		}
+		else {
+			const auto value = iter_for_value->second;
+			queue.emplace_back(value);
+			if (value > graph.second.max)
+				graph.second.max = value;
+			if (value == value && value < graph.second.min)
+				graph.second.min = value;
+		}
+		// Earse values beyond limit
+		while (queue.size() > m_log_max_size) {
+			const auto begin = queue.begin();
+			const auto value_at_begin = queue[0];
+			queue.erase(begin);
+			if (value_at_begin == graph.second.max) {
+				// Find new max
+				graph.second.max = 0;
+				for (const auto value : queue)
+					if (value == value && value > graph.second.max)
+						graph.second.max = value;
+			}
+			if (value_at_begin == graph.second.min) {
+				// Find new min
+				graph.second.min = graph.second.max;
+				for (const auto value : queue)
+					if (value == value && value < graph.second.min)
+						graph.second.min = value;
+			}
+		}
+	}
 
-	while (m_log.size() > m_log_max_size)
-		m_log.erase(m_log.begin());
+	// Add new graphs
+	for (const auto& value : values) {
+		const auto iter_for_log = m_log2.find(value.first);
+		if (iter_for_log == m_log2.end()) {
+			auto& new_graph = m_log2[value.first];
+			new_graph.max = value.second;
+			new_graph.min = value.second;
+			new_graph.queue = std::deque<float>((size_t)(m_log_max_size - 1), NAN);
+			new_graph.queue.emplace_back(value.second);
+		}
+	}
 }
 
 void ProfilerGraph::draw(s32 x_left, s32 y_bottom, video::IVideoDriver *driver,
 		gui::IGUIFont *font) const
 {
-	// Do *not* use UNORDERED_MAP here as the order needs
-	// to be the same for each call to prevent flickering
-	std::map<std::string, Meta> m_meta;
-
-	for (const Piece &piece : m_log) {
-		for (const auto &i : piece.values) {
-			const std::string &id = i.first;
-			const float &value = i.second;
-			std::map<std::string, Meta>::iterator j = m_meta.find(id);
-
-			if (j == m_meta.end()) {
-				m_meta[id] = Meta(value);
-				continue;
-			}
-
-			if (value < j->second.min)
-				j->second.min = value;
-
-			if (value > j->second.max)
-				j->second.max = value;
-		}
-	}
-
 	// Assign colors
 	static const video::SColor usable_colors[] = {video::SColor(255, 255, 100, 100),
 			video::SColor(255, 90, 225, 90),
@@ -64,34 +96,22 @@ void ProfilerGraph::draw(s32 x_left, s32 y_bottom, video::IVideoDriver *driver,
 			video::SColor(255, 220, 220, 100)};
 	static const u32 usable_colors_count =
 			sizeof(usable_colors) / sizeof(*usable_colors);
-	u32 next_color_i = 0;
-
-	for (auto &i : m_meta) {
-		Meta &meta = i.second;
-		video::SColor color(255, 200, 200, 200);
-
-		if (next_color_i < usable_colors_count)
-			color = usable_colors[next_color_i++];
-
-		meta.color = color;
-	}
-
 	s32 graphh = 50;
 	s32 textx = x_left + m_log_max_size + 15;
 	s32 textx2 = textx + 200 - 15;
-	s32 meta_i = 0;
+	s32 graph_i = 0;
 
-	for (const auto &p : m_meta) {
-		const std::string &id = p.first;
-		const Meta &meta = p.second;
+	for (const auto &graph : m_log2) {
+		const std::string &id = graph.first;
+		video::SColor color = graph_i <= usable_colors_count ? usable_colors[graph_i] : video::SColor(255, 200, 200, 200);
 		s32 x = x_left;
-		s32 y = y_bottom - meta_i * 50;
-		float show_min = meta.min;
-		float show_max = meta.max;
+		s32 y = y_bottom - graph_i * 50;
+		float show_min = graph.second.min;
+		float show_max = graph.second.max;
 
 		if (show_min >= -0.0001 && show_max >= -0.0001) {
 			if (show_min <= show_max * 0.5)
-				show_min = 0;
+				show_min = show_min;
 		}
 
 		// Text drawing
@@ -103,7 +123,7 @@ void ProfilerGraph::draw(s32 x_left, s32 y_bottom, video::IVideoDriver *driver,
 		font->draw(utf8_to_wide(id).c_str(),
 				core::rect<s32>(textx, y - graphh / 2 - texth / 2, textx2,
 						y - graphh / 2 + texth / 2),
-				meta.color);
+				color);
 
 		// Graph border values
 		static const char formats_by_precision[2][5] = { "%.3g", "%.5g" };
@@ -117,7 +137,7 @@ void ProfilerGraph::draw(s32 x_left, s32 y_bottom, video::IVideoDriver *driver,
 		font->draw(buf,
 				core::rect<s32>(textx, y - graphh, textx2,
 					y - graphh + texth),
-				meta.color);
+				color);
 
 		// Graph drawing
 
@@ -127,16 +147,12 @@ void ProfilerGraph::draw(s32 x_left, s32 y_bottom, video::IVideoDriver *driver,
 		float lastscaledvalue = 0.0;
 		bool lastscaledvalue_exists = false;
 
-		for (const Piece &piece : m_log) {
-			float value = 0;
-			bool value_exists = false;
-			Profiler::GraphValues::const_iterator k = piece.values.find(id);
+		//auto sp3 = ScopeProfiler(g_profiler, "ProfilerGraph::draw() draw new");
 
-			if (k != piece.values.end()) {
-				value = k->second;
-				value_exists = true;
-			}
+		//new
+		for (const auto& value : graph.second.queue) {
 
+			bool value_exists = value == value; // False if value is NaN
 			if (!value_exists) {
 				x++;
 				lastscaledvalue_exists = false;
@@ -159,22 +175,22 @@ void ProfilerGraph::draw(s32 x_left, s32 y_bottom, video::IVideoDriver *driver,
 					s32 ivalue1 = lastscaledvalue * graph1h;
 					s32 ivalue2 = scaledvalue * graph1h;
 					driver->draw2DLine(
-							v2s32(x - 1, graph1y - ivalue1),
-							v2s32(x, graph1y - ivalue2),
-							meta.color);
+						v2s32(x - 1, graph1y - ivalue1),
+						v2s32(x, graph1y - ivalue2),
+						color);
 				}
 
 				lastscaledvalue = scaledvalue;
 				lastscaledvalue_exists = true;
-			} else {
+			}
+			else {
 				s32 ivalue = scaledvalue * graph1h;
 				driver->draw2DLine(v2s32(x, graph1y),
-						v2s32(x, graph1y - ivalue), meta.color);
+					v2s32(x, graph1y - ivalue), color);
 			}
 
 			x++;
 		}
-
-		meta_i++;
+		graph_i++;
 	}
 }

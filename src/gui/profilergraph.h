@@ -36,20 +36,16 @@ private:
 		Piece(Profiler::GraphValues v) : values(std::move(v)) {}
 		Profiler::GraphValues values;
 	};
-	// Data for drawing a one graph. Updates every frame.
-	struct Meta
-	{
+
+	struct Graph {
 		float min;
 		float max;
-		video::SColor color;
-		Meta(float initial = 0,
-				video::SColor color = video::SColor(255, 255, 255, 255)) :
-				min(initial),
-				max(initial), color(color)
-		{
-		}
+		std::deque<float> queue;
 	};
 	std::deque<Piece> m_log;
+	// Do *not* use `unordered_map` here as the order needs
+	// to be the same when one graphs is added or removed
+	std::map<std::string, Graph> m_log2;
 
 public:
 	u32 m_log_max_size = 200;
