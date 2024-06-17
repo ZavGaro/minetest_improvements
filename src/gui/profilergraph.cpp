@@ -95,26 +95,27 @@ void ProfilerGraph::draw(s32 x_left, s32 y_bottom, video::IVideoDriver *driver,
 		}
 
 		const s32 texth = 15;
-		char buf[20];
-		if (floorf(show_max) == show_max)
-			porting::mt_snprintf(buf, sizeof(buf), "%.5g", show_max);
-		else
-			porting::mt_snprintf(buf, sizeof(buf), "%.3g", show_max);
-		font->draw(utf8_to_wide(buf).c_str(),
-				core::rect<s32>(textx, y - graphh, textx2,
-						y - graphh + texth),
-				meta.color);
+		char buf[32];
 
-		if (floorf(show_min) == show_min)
-			porting::mt_snprintf(buf, sizeof(buf), "%.5g", show_min);
-		else
-			porting::mt_snprintf(buf, sizeof(buf), "%.3g", show_min);
-		font->draw(utf8_to_wide(buf).c_str(),
-				core::rect<s32>(textx, y - texth, textx2, y), meta.color);
-
+		// Graph name
 		font->draw(utf8_to_wide(id).c_str(),
 				core::rect<s32>(textx, y - graphh / 2 - texth / 2, textx2,
 						y - graphh / 2 + texth / 2),
+				meta.color);
+
+		// Graph border values
+		static const char formats_by_precision[2][5] = { "%.3g", "%.5g" };
+		char format[16];
+		porting::mt_snprintf(format, sizeof(format),
+				"%s\n\n%s",
+				formats_by_precision[floorf(show_max) == show_max],
+				formats_by_precision[floorf(show_min) == show_min]);
+
+		porting::mt_snprintf(buf, sizeof(buf),
+				format, show_max, show_min);
+		font->draw(buf,
+				core::rect<s32>(textx, y - graphh, textx2,
+					y - graphh + texth),
 				meta.color);
 
 		s32 graph1y = y;
