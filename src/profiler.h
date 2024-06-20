@@ -41,8 +41,8 @@ extern Profiler *g_profiler;
 	`Game::updateProfilerGraphs()`, result is displayed by `ProfilerGraph`.
 
 	- Cycle for all other data lasts for `profiler_print_interval` seconds (user
-	setting) or 3 seconds and managed in `Game::updateProfilers()`, result is
-	given in text form by `print` function. 
+	setting) or 3 seconds (if profiler_print_interval == 0) and managed in
+	`Game::updateProfilers()`, result is given in text form by `print` function. 
 
 	All data is cleared at cycle end.
 */
@@ -71,9 +71,9 @@ public:
 	void avg(const std::string &name, float value);
 	/*
 		Sets value to profiler entry with given `name` if it is larger then existing
-		one and increases record coutn by 1.
+		one. Does not change count in the entry.
 
-		As a resut, profiler will give *max* record value as value and count of records as avgCount.
+		As a resut, profiler will give *max* record value as value and "1" as avgCount.
 		(If only this method is used for given entry between profiler updates)
 	*/
 	void max(const std::string &name, float value);
