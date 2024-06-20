@@ -52,8 +52,7 @@ public:
 	Profiler();
 
 	/*
-		Adds value to profiler entry with given `name`. Does not change count
-		in the entry.
+		Adds value to profiler entry with given `name`.
 
 		As a resut, profiler will give *sum* of record values as value and "1" as avgCount.
 		(If only this method is used for given entry between profiler updates)
@@ -61,7 +60,7 @@ public:
 	void add(const std::string &name, float value);
 
 	/*
-		Adds value to profiler entry with given `name` and increases its record
+		Adds value to profiler entry with given `name` and increases its avgCount
 		count by 1.
 	
 		As a resut, profiler will give *average* of record vaues as value and
@@ -71,7 +70,7 @@ public:
 	void avg(const std::string &name, float value);
 	/*
 		Sets value to profiler entry with given `name` if it is larger then existing
-		one. Does not change count in the entry.
+		one.
 
 		As a resut, profiler will give *max* record value as value and "1" as avgCount.
 		(If only this method is used for given entry between profiler updates)
@@ -117,7 +116,7 @@ private:
 		// Recorded value. Recording method depends on used functions (add/avg/max)
 		// of profiler
 		float value = 0;
-		// Count of records.
+		// Count of records when `avg()` is used.
 		int avgcount = 0;
 
 		inline void reset() {
@@ -151,7 +150,7 @@ enum ScopeProfilerType : u8
 	SPT_AVG,
 	// Accumulate measurements until frame update and then add sum to profiler graph.
 	SPT_GRAPH_ADD,
-	// Save only the largest recorded value. Profiler will print them as value and "1" as count.
+	// Save only the largest recorded value. Profiler will print it as value and "1" as count.
 	SPT_MAX
 };
 
